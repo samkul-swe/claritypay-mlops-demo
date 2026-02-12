@@ -301,3 +301,31 @@ Built to demonstrate MLOps capabilities for the ClarityPay MLOps Engineer positi
 ## 📝 License
 
 MIT License - Feel free to use this for learning or demonstration purposes.
+## ☁️ Cloud Architecture
+
+### AWS Integration
+- **S3 Data Lake:** Model artifacts and training data stored in S3
+- **Architecture:** Designed for AWS deployment (Lambda, SageMaker, ECS)
+- **Scalability:** Ready to scale with AWS services
+```bash
+# Current S3 structure
+s3://claritypay-mlops-demo-data/
+├── models/
+│   └── credit_model.pkl
+└── data/
+    └── train_reference.csv
+```
+
+### Deployment Options
+- **Lambda:** Serverless inference (current: Render)
+- **SageMaker:** Managed ML platform
+- **ECS/Fargate:** Container orchestration
+
+### Databricks Integration
+- **Platform:** Databricks Community Edition
+- **MLflow:** Native integration for experiment tracking
+- **Notebooks:** Interactive model development and training
+- **Spark:** Distributed data processing ready
+
+**Notebook:** Credit scoring model training with MLflow tracking
+**Environment:** Databricks Runtime with MLlib and XGBoost
