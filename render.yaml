@@ -1,0 +1,22 @@
+services:
+  # API Service
+  - type: web
+    name: claritypay-mlops-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /health
+    
+  # MLflow Service (Optional - for full demo)
+  - type: web
+    name: claritypay-mlops-mlflow
+    env: docker
+    dockerCommand: mlflow server --host 0.0.0.0 --port 5000
+    envVars:
+      - key: PORT
+        value: 5000
