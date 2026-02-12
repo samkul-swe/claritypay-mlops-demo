@@ -1,24 +1,22 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from agent import CreditAnalystAgent
 import joblib
 import numpy as np
 import os
 import uvicorn
 
-agent = CreditAnalystAgent()
+# MongoDB integration
+from database import PredictionLogger
 
 # Initialize FastAPI
 app = FastAPI(
     title="ClarityPay Credit Scoring API",
     description="Production-ready MLOps platform for point-of-sale lending",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    version="1.0.0"
 )
 
-# Enable CORS for recruiter to test from browser
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,6 +24,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize MongoDB logger
+logger = PredictionLogger()
 
 # Global model variable
 model = None
@@ -49,15 +50,15 @@ def load_model():
 # Request model
 class CreditApplication(BaseModel):
     applicant_id: str = Field(..., description="Unique applicant identifier")
-    age: int = Field(..., ge=18, le=100, description="Applicant age")
-    annual_income: float = Field(..., ge=0, description="Annual income in USD")
-    debt_to_income_ratio: float = Field(..., ge=0, le=5, description="Debt-to-income ratio")
-    num_credit_lines: int = Field(..., ge=0, description="Number of open credit lines")
-    num_late_payments: int = Field(..., ge=0, description="Number of late payments")
-    credit_utilization: float = Field(..., ge=0, le=2, description="Credit utilization ratio")
-    months_since_last_delinquency: int = Field(..., ge=0, description="Months since last delinquency")
-    num_credit_inquiries: int = Field(..., ge=0, description="Number of credit inquiries")
-    purchase_amount: float = Field(..., ge=0, description="Purchase amount")
+    age: int = Field(..., ge=18, le=100)
+    annual_income: float = Field(..., ge=0)
+    debt_to_income_ratio: float = Field(..., ge=0, le=5)
+    num_credit_lines: int = Field(..., ge=0)
+    num_late_payments: int = Field(..., ge=0)
+    credit_utilization: float = Field(..., ge=0, le=2)
+    months_since_last_delinquency: int = Field(..., ge=0)
+    num_credit_inquiries: int = Field(..., ge=0)
+    purchase_amount: float = Field(..., ge=0)
 
     class Config:
         json_schema_extra = {
@@ -109,12 +110,11 @@ def calculate_loan_terms(credit_score: int, purchase_amount: float):
         }
 
 def get_simple_explanation(features: np.ndarray, prediction_proba: float):
-    """Generate simple explanation without SHAP (for speed)"""
+    """Generate simple explanation"""
     feature_dict = {name: float(val) for name, val in zip(feature_names, features[0])}
     
     explanations = []
     
-    # Debt to income
     if feature_dict['debt_to_income_ratio'] > 0.5:
         explanations.append({
             "factor": "High debt-to-income ratio",
@@ -128,7 +128,6 @@ def get_simple_explanation(features: np.ndarray, prediction_proba: float):
             "impact": "positive"
         })
     
-    # Late payments
     if feature_dict['num_late_payments'] > 2:
         explanations.append({
             "factor": "Multiple late payments",
@@ -142,7 +141,6 @@ def get_simple_explanation(features: np.ndarray, prediction_proba: float):
             "impact": "positive"
         })
     
-    # Credit utilization
     if feature_dict['credit_utilization'] > 0.7:
         explanations.append({
             "factor": "High credit utilization",
@@ -156,25 +154,21 @@ def get_simple_explanation(features: np.ndarray, prediction_proba: float):
             "impact": "positive"
         })
     
-    return explanations[:3]  # Top 3 factors
+    return explanations[:3]
 
 @app.get("/")
 def root():
     return {
         "message": "ClarityPay Credit Scoring API - MLOps Demo",
         "version": "1.0.0",
-        "author": "Sampada Kulkarni",
-        "demo_for": "ClarityPay MLOps Engineer Position",
         "endpoints": {
             "health": "/health",
-            "predict": "/predict (POST)",
-            "docs": "/docs",
-            "examples": "/examples"
+            "predict": "/predict",
+            "stats": "/stats",
+            "recent": "/recent",
+            "docs": "/docs"
         },
-        "tech_stack": [
-            "Python", "FastAPI", "XGBoost", "MLflow", 
-            "Docker", "Scikit-learn"
-        ]
+        "mongodb_connected": logger.db is not None
     }
 
 @app.get("/health")
@@ -182,56 +176,13 @@ def health_check():
     return {
         "status": "healthy",
         "model_loaded": model is not None,
+        "mongodb_connected": logger.db is not None,
         "version": "1.0.0"
-    }
-
-@app.get("/examples")
-def get_examples():
-    """Provide example requests for testing"""
-    return {
-        "good_credit_example": {
-            "applicant_id": "GOOD_CREDIT_001",
-            "age": 45,
-            "annual_income": 85000,
-            "debt_to_income_ratio": 0.25,
-            "num_credit_lines": 8,
-            "num_late_payments": 0,
-            "credit_utilization": 0.30,
-            "months_since_last_delinquency": 60,
-            "num_credit_inquiries": 1,
-            "purchase_amount": 5000
-        },
-        "risky_credit_example": {
-            "applicant_id": "RISKY_CREDIT_001",
-            "age": 22,
-            "annual_income": 25000,
-            "debt_to_income_ratio": 1.2,
-            "num_credit_lines": 2,
-            "num_late_payments": 5,
-            "credit_utilization": 0.95,
-            "months_since_last_delinquency": 3,
-            "num_credit_inquiries": 8,
-            "purchase_amount": 8000
-        },
-        "moderate_credit_example": {
-            "applicant_id": "MODERATE_CREDIT_001",
-            "age": 35,
-            "annual_income": 55000,
-            "debt_to_income_ratio": 0.45,
-            "num_credit_lines": 5,
-            "num_late_payments": 2,
-            "credit_utilization": 0.60,
-            "months_since_last_delinquency": 12,
-            "num_credit_inquiries": 3,
-            "purchase_amount": 3500
-        }
     }
 
 @app.post("/predict")
 def predict_credit_risk(application: CreditApplication):
-    """
-    Predict credit risk and provide loan terms recommendation
-    """
+    """Predict credit risk and log to MongoDB"""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     
@@ -267,7 +218,8 @@ def predict_credit_risk(application: CreditApplication):
         else:
             confidence = "LOW"
         
-        return {
+        # Build response
+        result = {
             "applicant_id": application.applicant_id,
             "credit_score": credit_score,
             "default_probability": round(default_probability, 4),
@@ -275,30 +227,29 @@ def predict_credit_risk(application: CreditApplication):
             "recommended_terms": terms,
             "explanation": explanation,
             "confidence": confidence,
-            "model_version": "1.0.0",
-            "processed_at": "2024-02-12T10:00:00Z"
+            "model_version": "1.0.0"
         }
+        
+        # Log to MongoDB (if connected)
+        doc_id = logger.log_prediction(application.dict(), result)
+        if doc_id:
+            result["logged_to_mongodb"] = True
+        
+        return result
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
-    
-@app.post("/analyze")
-def ai_analysis(application: CreditApplication):
-    """
-    Get AI-powered analysis of credit application
-    Combines model prediction with AI agent insights
-    """
-    # Get prediction first
-    prediction = predict_credit_risk(application)
-    
-    # Get AI analysis
-    analysis = agent.analyze(application.dict(), prediction)
-    
-    return {
-        "prediction": prediction,
-        "ai_analysis": analysis,
-        "agent_type": "claude-3.5-sonnet" if agent.client else "rule-based"
-    }
+
+@app.get("/stats")
+def get_prediction_stats():
+    """Get prediction statistics from MongoDB"""
+    return logger.get_stats()
+
+@app.get("/recent")
+def get_recent_predictions(limit: int = 10):
+    """Get recent predictions from MongoDB"""
+    predictions = logger.get_recent_predictions(limit)
+    return {"count": len(predictions), "predictions": predictions}
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
