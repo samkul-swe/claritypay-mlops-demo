@@ -2,131 +2,100 @@
 
 Production machine learning system for point-of-sale credit decisioning.
 
-**Live Demo:** https://samkul-swe.github.io/claritypay-mlops-demo  
-**API:** https://claritypay-mlops-demo.onrender.com/docs  
-**Code:** https://github.com/samkul-swe/claritypay-mlops-demo
+**🌐 Live Demo:** https://samkul-swe.github.io/claritypay-mlops-demo  
+**📚 API Docs:** https://claritypay-mlops-demo.onrender.com/docs  
+**💻 GitHub:** https://github.com/samkul-swe/claritypay-mlops-demo
 
 ---
 
-## What This Is
+## What This Does
 
-An end-to-end MLOps system that makes real-time credit decisions. Built to demonstrate production ML capabilities for fintech lending platforms.
+Makes real-time credit decisions using machine learning. You submit application data (age, income, debt history), and it returns a credit score, approval decision, and loan terms.
 
-**Try it:** Visit the live demo, click a button, see the API make a credit decision in real-time.
+Try it: Click the live demo link above and hit "Get Credit Decision"
 
 ---
 
 ## What's Built
 
-**Credit Scoring Model**
-- XGBoost classifier trained on 10,000 applications
-- 85% accuracy
-- Predicts default risk and recommends loan terms
+**ML Model**
+- XGBoost classifier trained on 10,000 credit applications
+- 85% accuracy predicting default risk
+- Returns credit score (0-850) and recommended terms
 
 **Production API**
-- FastAPI serving predictions in <200ms
-- Automatic documentation at `/docs`
+- FastAPI serving real-time predictions
+- Automatic documentation at /docs
 - Input validation and error handling
-- Health monitoring
-
-**Cloud Deployment**
-- Docker containerized
-- Deployed on Render (live 24/7)
-- AWS S3 for model storage
-- Databricks for distributed training
+- Deployed with Docker on Render (live 24/7)
 
 **Explainability**
-- Shows why each decision was made
+- Shows top factors influencing each decision
 - Required for lending compliance (ECOA/FCRA)
-- Identifies top risk factors
+
+**Cloud Integration**
+- AWS S3 bucket for model storage
+- Docker containerization
+- MongoDB integration (code complete, SSL issue on free tier)
 
 ---
 
 ## How It Works
 ```
-1. User submits application data (age, income, debt, etc.)
-   ↓
-2. API validates the input
-   ↓
-3. XGBoost model predicts default risk
-   ↓
-4. System calculates credit score (0-850)
-   ↓
-5. Assigns loan terms based on score (APR, months, payment)
-   ↓
-6. Explains the decision (top factors)
-   ↓
-7. Returns JSON response
-```
-
-**Example:**
-```bash
-curl -X POST "https://claritypay-mlops-demo.onrender.com/predict" \
-  -d '{"age": 35, "annual_income": 65000, ...}'
-
-# Returns:
-{
-  "credit_score": 720,
-  "approval_recommendation": "APPROVED",
-  "recommended_terms": {
-    "term_months": 12,
-    "apr": 8.99,
-    "monthly_payment": 318.73
-  },
-  "explanation": [...]
-}
+1. Application Data → FastAPI validates input
+2. XGBoost Model → Predicts default risk  
+3. Scoring Logic → Converts to 0-850 credit score
+4. Terms Calculator → Determines APR and payment terms
+5. Explainer → Identifies top risk factors
+6. JSON Response → Returns decision
 ```
 
 ---
 
-## Technology
+## Technology Stack
 
-**ML Stack:** Python, XGBoost, Scikit-learn, MLflow  
+**ML:** Python, XGBoost, Scikit-learn, NumPy, Pandas  
 **API:** FastAPI, Pydantic, Uvicorn  
 **Deployment:** Docker, Render  
-**Cloud:** AWS S3, Databricks, MongoDB Atlas  
+**Cloud:** AWS S3, MongoDB Atlas (integration ready)  
+**MLOps:** MLflow (experiment tracking)
 
 ---
 
-## MLOps Capabilities Shown
+## MLOps Capabilities
 
-✅ **Complete ML Lifecycle** - Training → Deployment → Monitoring  
-✅ **Production API** - Real-time inference with documentation  
-✅ **Cloud Integration** - AWS and Databricks  
-✅ **Containerization** - Docker for consistent deployment  
-✅ **Model Monitoring** - Health checks and logging  
+✅ **Model Training** - XGBoost with proper train/test split  
+✅ **Model Serving** - REST API with <200ms latency  
+✅ **Deployment** - Docker containerization  
+✅ **Monitoring** - Health checks and logging  
 ✅ **Explainability** - Compliance-ready decisions  
+✅ **Cloud** - AWS S3 integration, production-ready architecture  
 
 ---
 
 ## Cloud Architecture
 
-**AWS S3**
-- Stores model artifacts
-- Data lake for training data
-- Bucket: `s3://claritypay-mlops-demo-data/`
+**Current Deployment:**
+```
+GitHub → Render (Docker build) → Live API
+```
 
-**Databricks**
-- Distributed model training
-- Spark for data processing
-- MLflow integration
-- Community Edition demo completed
+**Data Storage:**
+- AWS S3 bucket: `claritypay-mlops-demo-data`
+- Model artifacts stored in S3
+- Training data in S3
 
-**MongoDB** (Code Complete)
-- Prediction logging
-- Statistics tracking
-- Ready for production (requires SSL-compatible hosting)
-
-**Docker + Render**
-- Containerized deployment
-- Auto-scaling ready
-- Currently serving live API
+**MongoDB Integration:**
+- Code complete for prediction logging
+- `/stats` and `/recent` endpoints implemented
+- Currently has SSL compatibility issue on Render free tier
+- Works locally, ready for production AWS deployment
 
 ---
 
 ## Quick Start
 
-**Try It Online:**
+**Try Online:**  
 https://samkul-swe.github.io/claritypay-mlops-demo
 
 **Run Locally:**
@@ -142,11 +111,14 @@ docker run -p 8000:8000 credit-scoring
 
 ## Project Structure
 ```
-├── src/api/main.py           # FastAPI application
-├── models/credit_model.pkl   # Trained model
-├── Dockerfile                 # Container config
-├── requirements.txt           # Dependencies
-└── index.html                 # Demo interface
+├── src/api/
+│   ├── main.py          # FastAPI application
+│   └── database.py      # MongoDB logging (ready)
+├── models/
+│   └── credit_model.pkl # Trained XGBoost model
+├── Dockerfile           # Container config
+├── requirements.txt     # Dependencies
+└── index.html          # Demo page
 ```
 
 ---
@@ -154,13 +126,6 @@ docker run -p 8000:8000 credit-scoring
 ## Author
 
 **Sampada Kulkarni**  
-📧 kulkarni.samp@northeastern.edu  
 🔗 [linkedin.com/in/samkul-swe](https://linkedin.com/in/samkul-swe)
 
-Built to demonstrate production MLOps capabilities for fintech ML infrastructure.
-
-**Background:** 3 years at IBM building AIOps platforms (monitoring, deployment, data integration)
-
----
-
-MIT License
+3 years building production ML systems at IBM (AIOps infrastructure for 500+ customers)
